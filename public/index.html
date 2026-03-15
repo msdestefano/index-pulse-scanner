@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>IndexPulse Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 1rem;
+        background: #0b1020;
+        color: #f5f5f5;
+      }
+      h1 {
+        margin-bottom: 0.25rem;
+      }
+      .subtitle {
+        color: #a0aec0;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+      th,
+      td {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid #2d3748;
+        font-size: 0.9rem;
+      }
+      th {
+        text-align: left;
+        background: #111827;
+        position: sticky;
+        top: 0;
+      }
+      tr:hover {
+        background: #1a202c;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.15rem 0.4rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge-bullish {
+        background: #22543d;
+        color: #c6f6d5;
+      }
+      .badge-bearish {
+        background: #742a2a;
+        color: #fed7d7;
+      }
+      .badge-mixed {
+        background: #4a5568;
+        color: #e2e8f0;
+      }
+      .score {
+        font-weight: 600;
+      }
+      .meta {
+        font-size: 0.8rem;
+        color: #a0aec0;
+        margin-top: 0.5rem;
+      }
+      .disclaimer {
+        margin-top: 1rem;
+        font-size: 0.75rem;
+        color: #a0aec0;
+        max-width: 800px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>IndexPulse Scanner</h1>
+    <div class="subtitle">
+      Intraday patterns in SPX / NDX / DJI universe that historically resemble larger 1‑day moves.
+      <br />
+      This is a research and pattern‑discovery tool only, not trading or investment advice.
+    </div>
+
+    <div class="meta" id="meta"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Index</th>
+          <th>Score</th>
+          <th>Bias</th>
+          <th>Tags</th>
+          <th>Range vs Avg</th>
+          <th>ROC (short)</th>
+          <th>RSI (short)</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody id="signals-body"></tbody>
+    </table>
+
+    <div class="disclaimer">
+      This interface highlights patterns based on simplified, simulated data in this demo.
+      In a real deployment, you would connect to a licensed market data provider and build
+      the historical pattern engine described in your spec. Nothing shown here is a
+      recommendation to buy or sell any security. Past patterns do not guarantee future
+      results. Options and short‑term trading involve substantial risk and are not suitable
+      for all investors.
+    </div>
+
+    <script>
+      async function fetchSignals() {
+        try {
+          const res = await fetch("/api/signals");
+          const data = await res.json();
+          const tbody = document.getElementById("signals-body");
+          const meta = document.getElementById("meta");
+
+          tbody.innerHTML = "";
+
+          meta.textContent = `Min score: ${data.minScore} | Last scan: ${new Date(
+            data.updatedAt
+          ).toLocaleTimeString()}`;
+
+          data.signals.forEach((s) => {
+            const tr = document.createElement("tr");
+
+            const biasClass =
+              s.bias === "historically_bullish_like"
+                ? "badge-bullish"
+                : s.bias === "historically_bearish_like"
+                ? "badge-bearish"
+                : "badge-mixed";
+
+            const tags = s.tags.join(", ");
+
+            tr.innerHTML = `
+              <td>${s.symbol}</td>
+              <td>${s.index}</td>
+              <td class="score">${s.score}</td>
+              <td><span class="badge ${biasClass}">${s.bias.replace(/_/g, " ")}</span></td>
+              <td>${tags}</td>
+              <td>${s.range.rangeVsAvg.toFixed(2)}x</td>
+              <td>${(s.momentum.rocShort * 100).toFixed(2)}%</td>
+              <td>${s.momentum.rsiShort.toFixed(1)}</td>
+              <td>${new Date(s.timestamp).toLocaleTimeString()}</td>
+            `;
+
+            tbody.appendChild(tr);
+          });
+        } catch (err) {
+          console.error("Error fetching signals", err);
+        }
+      }
+
+      fetchSignals();
+      setInterval(fetchSignals, 10000);
+    </script>
+  </body>
+</html>
